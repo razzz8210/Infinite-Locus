@@ -10,7 +10,7 @@ const documentVersionSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: true,
+      default: '',
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

@@ -1,9 +1,15 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
+
+// Verify critical env vars
+if (!process.env.JWT_SECRET) {
+  console.error('WARNING: JWT_SECRET is not set in .env file!');
+}
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');

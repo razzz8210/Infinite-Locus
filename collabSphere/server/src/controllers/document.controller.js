@@ -84,8 +84,12 @@ exports.createDocument = async (req, res) => {
       owner: userId,
     });
 
-    // Create initial version
-    await DocumentVersion.createVersion(document._id, content || '', userId, 'manual');
+    // Create initial version (non-blocking — don't fail document creation if this errors)
+    try {
+      await DocumentVersion.createVersion(document._id, content || '', userId, 'manual');
+    } catch (versionError) {
+      console.error('Failed to create initial version:', versionError);
+    }
 
     const populatedDoc = await Document.findById(document._id)
       .populate('owner', 'name email');
