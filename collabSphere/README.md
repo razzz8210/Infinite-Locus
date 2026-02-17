@@ -29,12 +29,7 @@ npm install
 ```
 
 3. Create `.env` file in `server/` folder:
-```
-PORT=5000
-MONGODB_URI=your-mongodb-uri
-JWT_SECRET=your-secret-key
-CLIENT_URL=http://localhost:5173
-```
+
 
 4. Start backend
 ```bash
@@ -72,6 +67,3 @@ npm run dev
 - `GET /api/documents/:id/versions` - Get version history
 - `POST /api/documents/:id/versions/:vid/restore` - Restore version
 
-## License
-
-MIT
