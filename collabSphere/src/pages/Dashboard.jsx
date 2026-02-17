@@ -172,7 +172,7 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {documents.filter(d => d.collaborators?.length > 1).length}
+                {documents.filter(d => d.collaborators?.length > 0).length}
               </p>
               <p className="text-sm text-gray-500">Shared Documents</p>
             </div>
