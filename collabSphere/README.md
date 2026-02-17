@@ -4,7 +4,7 @@ A real-time document collaboration platform.
 
 ## Tech Stack
 
-**Frontend:** React, Tailwind CSS, TipTap Editor, Socket.IO Client
+**Frontend:** React, Tailwind CSS,  Editor, Socket.IO Client
 
 **Backend:** Node.js, Express, MongoDB, Socket.IO, JWT
 
