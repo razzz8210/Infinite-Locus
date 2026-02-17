@@ -14,6 +14,7 @@ if (!process.env.JWT_SECRET) {
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const documentRoutes = require('./routes/document.routes');
+const uploadRoutes = require('./routes/upload.routes');
 
 // Import socket handler
 const setupSocketHandlers = require('./socket/socketHandler');
@@ -40,6 +41,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

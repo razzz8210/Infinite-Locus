@@ -27,13 +27,15 @@ import {
   Heading2,
   Heading3,
   Undo,
-  Redo
+  Redo,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import UnderlineExt from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
+import Image from '@tiptap/extension-image';
 import { Button, Input, Modal, Avatar, Card } from '../components/ui';
 import { AvatarGroup } from '../components/ui/Avatar';
 import { PageLoader, InlineLoader } from '../components/ui/Loader';
@@ -84,10 +86,52 @@ const Editor = () => {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
   const [addingCollaborator, setAddingCollaborator] = useState(false);
+
+  // Image upload
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
   
   // Refs for debouncing
   const saveTimeoutRef = useRef(null);
   const isRemoteUpdate = useRef(false);
+
+  // Upload image function
+  const uploadImage = async (file) => {
+    if (!file) return null;
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    try {
+      setUploadingImage(true);
+      const response = await api.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      // Cloudinary returns full URL directly
+      return response.data.url;
+    } catch (error) {
+      toast.error('Failed to upload image');
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Handle image insert
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const url = await uploadImage(file);
+    if (url && editor) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // TipTap Editor
   const editor = useEditor({
@@ -100,6 +144,13 @@ const Editor = () => {
       Placeholder.configure({
         placeholder: 'Start typing your document...',
       }),
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded-lg my-4',
+        },
+      }),
     ],
     content: '',
     onUpdate: ({ editor }) => {
@@ -110,6 +161,43 @@ const Editor = () => {
       
       const html = editor.getHTML();
       handleContentChange(html);
+    },
+    editorProps: {
+      handleDrop: (view, event, slice, moved) => {
+        if (!moved && event.dataTransfer?.files?.length) {
+          const file = event.dataTransfer.files[0];
+          if (file.type.startsWith('image/')) {
+            event.preventDefault();
+            uploadImage(file).then(url => {
+              if (url) {
+                editor.chain().focus().setImage({ src: url }).run();
+              }
+            });
+            return true;
+          }
+        }
+        return false;
+      },
+      handlePaste: (view, event) => {
+        const items = event.clipboardData?.items;
+        if (items) {
+          for (const item of items) {
+            if (item.type.startsWith('image/')) {
+              event.preventDefault();
+              const file = item.getAsFile();
+              if (file) {
+                uploadImage(file).then(url => {
+                  if (url) {
+                    editor.chain().focus().setImage({ src: url }).run();
+                  }
+                });
+              }
+              return true;
+            }
+          }
+        }
+        return false;
+      },
     },
   });
 
@@ -474,6 +562,27 @@ const Editor = () => {
         >
           <AlignRight className="w-4 h-4" />
         </ToolbarButton>
+
+        <ToolbarDivider />
+
+        <ToolbarButton
+          onClick={() => fileInputRef.current?.click()}
+          isActive={false}
+          title="Insert Image"
+        >
+          {uploadingImage ? (
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <ImageIcon className="w-4 h-4" />
+          )}
+        </ToolbarButton>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
 
         <ToolbarDivider />
 
