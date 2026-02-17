@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
@@ -9,7 +9,8 @@ import {
   Clock,
   Users,
   LogOut,
-  Settings
+  Settings,
+  Upload
 } from 'lucide-react';
 import { Button, Card, Input, Modal, Avatar } from '../components/ui';
 import { PageLoader } from '../components/ui/Loader';
@@ -24,6 +25,9 @@ const Dashboard = () => {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [creating, setCreating] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
+  const [importing, setImporting] = useState(false);
+  
+  const fileInputRef = useRef(null);
 
   const { user, logout } = useAuth();
   const toast = useToast();
@@ -76,6 +80,64 @@ const Dashboard = () => {
     setActiveMenu(null);
   };
 
+  // Import document from file
+  const handleImportDocument = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['text/plain', 'text/markdown', 'text/html', 'application/json'];
+    const allowedExtensions = ['.txt', '.md', '.html', '.json'];
+    
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+    
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+      toast.error('Please upload a .txt, .md, .html, or .json file');
+      return;
+    }
+
+    setImporting(true);
+    
+    try {
+      const text = await file.text();
+      let content = text;
+      let title = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      
+      // Convert plain text to HTML paragraphs
+      if (fileExt === '.txt') {
+        content = text.split('\n').filter(line => line.trim()).map(line => `<p>${line}</p>`).join('');
+      }
+      
+      // Convert markdown to basic HTML
+      if (fileExt === '.md') {
+        content = text
+          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+          .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+          .replace(/\*(.*)\*/gim, '<em>$1</em>')
+          .replace(/\n/gim, '</p><p>');
+        content = `<p>${content}</p>`;
+      }
+
+      // Create document with imported content
+      const response = await api.post('/documents', { 
+        title, 
+        content 
+      });
+      
+      setDocuments([response.data.document, ...documents]);
+      toast.success(`Imported "${title}" successfully!`);
+      navigate(`/document/${response.data.document._id}`);
+    } catch (error) {
+      toast.error('Failed to import document');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const filteredDocuments = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -116,6 +178,25 @@ const Dashboard = () => {
 
             {/* User Menu */}
             <div className="flex items-center gap-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.html,.json"
+                onChange={handleImportDocument}
+                className="hidden"
+              />
+              <Button
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+              >
+                {importing ? (
+                  <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Upload className="w-5 h-5" />
+                )}
+                <span className="ml-2 hidden sm:inline">Import</span>
+              </Button>
               <Button
                 variant="primary"
                 onClick={() => setIsCreateModalOpen(true)}
